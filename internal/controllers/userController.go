@@ -3,17 +3,19 @@ package userController
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type User struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	Name  string `json:"name" validate:"required"`
+	Idade uint8  `json:"idade" validate:"required,gt=0"`
 }
 
 var users = []User{
-	{ID: 1, Name: "Ana"},
-	{ID: 2, Name: "Maria"},
-	{ID: 3, Name: "Carlos"},
+	{Name: "Ana", Idade: 20},
+	{Name: "Maria", Idade: 21},
+	{Name: "Carlos", Idade: 22},
 }
 
 func List(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +35,20 @@ func Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error on decoding request", http.StatusBadRequest)
 		return
 	}
+	validate := validator.New()
+
+	if err := validate.Struct(newUser); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	for _, user := range users {
+		if user.Name == newUser.Name {
+			http.Error(w, "Name must be unique", http.StatusBadRequest)
+			return
+		}
+	}
+
 	users = append(users, newUser)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User created successfully"))
